@@ -1,9 +1,8 @@
 # app/main_app.py
 
-# =================================================================
-# As 3 linhas a seguir são a correção para o erro de importação
 import sys
 import os
+import pickle
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 # =================================================================
 
@@ -34,7 +33,7 @@ with st.sidebar:
     test_size = st.slider("4. Proporção de teste", 0.1, 0.4, 0.2, 0.05)
     random_state = st.number_input("5. random_state", value=42, step=1)
     btn = st.button("🚀 Rodar Análise")
-
+    
     st.markdown("---")
     st.header("🗄️ Opções de Banco de Dados (SQLite)")
     btn_create_db = st.button("1. Criar Banco de Dados")
@@ -42,7 +41,11 @@ with st.sidebar:
     btn_insert_sor = st.button("3. Inserir Dados (SOR)")
     btn_insert_sot = st.button("4. Inserir Dados (SOT)")
     btn_insert_spec = st.button("5. Inserir Dados (SPEC)")
-    btn_drop_db = st.button("6. Deletar Banco de Dados")
+    btn_drop_db = st.button("6. Dropar o Banco de Dados") # Botão para dropar o banco de dados
+    
+    st.markdown("---")
+    st.header("💾 Salvar o Modelo")
+    btn_save_model = st.button("7. Salvar Modelo Treinado")
 
 
 # Lógica de processamento e treinamento do modelo (SEM ALTERAÇÕES)
@@ -125,6 +128,20 @@ def answer_from_question(pergunta: str, tabela_imp: pd.DataFrame) -> str:
         )
     return "Posso analisar a **importância das variáveis** e **métricas**. Tente: *quais fatores são mais importantes?*"
 
+# Função para salvar o modelo
+def save_model(model: Pipeline, model_path: str = 'model/model.pickle'):
+    """Salva o modelo treinado em um arquivo .pickle."""
+    model_dir = os.path.dirname(model_path)
+    if not os.path.exists(model_dir):
+        os.makedirs(model_dir)
+        
+    try:
+        with open(model_path, 'wb') as f:
+            pickle.dump(model, f)
+        st.success(f"✅ Modelo salvo com sucesso em '{model_path}'")
+    except Exception as e:
+        st.error(f"Erro ao salvar o modelo: {e}")
+
 # ========== Fluxo da UI ==========
 if btn_create_db:
     database.create_database()
@@ -145,7 +162,7 @@ elif btn_drop_db:
     database.drop_database()
     st.info("Função `drop_database()` executada. Verifique o terminal para o resultado.")
 
-if not up and not btn:
+if not up and not btn and not btn_save_model:
     st.info("⬅️ Envie um CSV (`Summary of Weather.csv`) e/ou clique em **Rodar** após configurar.")
 elif btn and not up:
     st.warning("⚠️ Você clicou em **Rodar**, mas nenhum CSV foi enviado. Anexe um arquivo primeiro.")
@@ -210,3 +227,10 @@ elif up:
         st.markdown("### 💬 Resposta do Chatbot")
         st.info(answer_from_question(pergunta, imp))
         st.success("Pronto! Você pode ajustar a pergunta, trocar o alvo e reenviar a base.")
+    
+    # Adicionando o botão para salvar o modelo
+    if btn_save_model:
+        if 'model' in locals():
+            save_model(model)
+        else:
+            st.warning("⚠️ Você precisa rodar o modelo primeiro antes de salvá-lo. Clique em '🚀 Rodar Análise' para treinar o modelo.")
